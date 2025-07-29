@@ -1,10 +1,10 @@
 "use client";
 
-// import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import * as React from "react";
 import { useForm } from "react-hook-form";
-// import { toast } from "sonner";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,32 +14,32 @@ import {
 	FormField,
 	FormItem,
 	FormLabel,
-	// FormMessage,
+	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-// import { PasswordStrength } from "@/components/ui/password-strength";
 
-// import { sighInWithEmailAndPassword } from "@/app/(pages)/(auth)/(entrar)/actions";
-// import { LoginEmailAndPasswordBody } from "@/http/generated/api.schemas";
-// import { loginEmailAndPasswordBody } from "@/http/generated/schemas/auth/auth.zod";
+import { sighInWithEmailAndPassword } from "@/app/(pages)/(auth)/(entrar)/actions";
+import { /* LoginEmailAndPasswordBody */ PostLoginBody } from "@/http/generated/api.schemas";
+import { postLoginBody } from "@/http/generated/schemas/auth/auth.zod";
 
 export function SignInForm() {
 	const [rememberMe, setRememberMe] = React.useState(false);
 
-	// const [{ success, message, errors }, formAction, isPending] =
-	// 	React.useActionState(sighInWithEmailAndPassword, {
-	// 		success: false,
-	// 		message: null,
-	// 		errors: null,
-	// 	});
+	const [{ success, message, errors }, formAction, isPending] =
+		React.useActionState(sighInWithEmailAndPassword, {
+			success: false,
+			message: null,
+			errors: null,
+		});
 
-	// React.useEffect(() => {
-	// 	if (message) {
-	// 		toast.error(message);
-	// 	}
-	// }, [message, success]);
+	React.useEffect(() => {
+		if (message) {
+			toast.error(message);
+		}
+	}, [message, success]);
 
-	const form = useForm({
+	const form = useForm<PostLoginBody>({
+		resolver: zodResolver(postLoginBody),
 		defaultValues: {
 			email: "",
 			password: "",
@@ -48,7 +48,10 @@ export function SignInForm() {
 
 	return (
 		<Form {...form}>
-			<form className="w-full max-w-[440px] space-y-6">
+			<form
+				action={formAction}
+				className="w-full max-w-[440px] space-y-6 border"
+			>
 				<FormField
 					control={form.control}
 					name="email"
@@ -58,7 +61,7 @@ export function SignInForm() {
 							<FormControl>
 								<Input placeholder="E-mail" autoFocus {...field} />
 							</FormControl>
-							{/* {errors?.email && <FormMessage>{errors.email[0]}</FormMessage>} */}
+							{errors?.email && <FormMessage>{errors.email[0]}</FormMessage>}
 						</FormItem>
 					)}
 				/>
@@ -73,9 +76,9 @@ export function SignInForm() {
 								<FormControl>
 									<Input {...field} placeholder="Senha" />
 								</FormControl>
-								{/* {errors?.password && (
+								{errors?.password && (
 									<FormMessage>{errors.password[0]}</FormMessage>
-								)} */}
+								)}
 							</FormItem>
 						)}
 					/>
@@ -103,11 +106,10 @@ export function SignInForm() {
 
 				<Button
 					type="submit"
-					// disabled={isPending}
-					// isLoading={isPending}
+					disabled={isPending}
 					className="w-full"
 				>
-					Entrar
+					{isPending ? "Loading..." : "Entrar"}
 				</Button>
 			</form>
 

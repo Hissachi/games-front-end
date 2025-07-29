@@ -1,69 +1,105 @@
 "use client";
 
-// import { zodResolver } from "@hookform/resolvers/zod";
-import Link from "next/link";
 import * as React from "react";
-import { useForm } from "react-hook-form";
-// import { toast } from "sonner";
-
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	Form,
 	FormControl,
 	FormField,
 	FormItem,
 	FormLabel,
-	// FormMessage,
+	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-// import { PasswordStrength } from "@/components/ui/password-strength";
-
-// import { sighInWithEmailAndPassword } from "@/app/(pages)/(auth)/(entrar)/actions";
-// import { LoginEmailAndPasswordBody } from "@/http/generated/api.schemas";
-// import { loginEmailAndPasswordBody } from "@/http/generated/schemas/auth/auth.zod";
+import { postRegisterBody } from "@/http/generated/schemas/auth/auth.zod";
+import { PostRegisterBody } from "@/http/generated/api.schemas";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
+import { usePostRegister } from "@/http/generated/api";
+import { toast } from "sonner";
+import { AxiosError } from "axios";
+import { useRouter } from "next/navigation";
 
 export function SignUpForm() {
-	const [rememberMe, setRememberMe] = React.useState(false);
-
-	// const [{ success, message, errors }, formAction, isPending] =
-	// 	React.useActionState(sighInWithEmailAndPassword, {
-	// 		success: false,
-	// 		message: null,
-	// 		errors: null,
-	// 	});
-
-	// React.useEffect(() => {
-	// 	if (message) {
-	// 		toast.error(message);
-	// 	}
-	// }, [message, success]);
-
-	const form = useForm({
+	const router = useRouter();
+	const form = useForm<PostRegisterBody>({
+		resolver: zodResolver(postRegisterBody),
 		defaultValues: {
+			name: "",
 			email: "",
 			password: "",
 		},
 	});
 
-	return (
-		<Form {...form}>
-			<form className="w-full max-w-[440px] space-y-6">
-				<FormField
-					control={form.control}
-					name="email"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>E-mail</FormLabel>
-							<FormControl>
-								<Input placeholder="E-mail" autoFocus {...field} />
-							</FormControl>
-							{/* {errors?.email && <FormMessage>{errors.email[0]}</FormMessage>} */}
-						</FormItem>
-					)}
-				/>
+	const {
+		mutateAsync: createAccount,
+		isPending: isPendingCreateAccount,
+		isSuccess: isSuccessCreateAccount,
+	} = usePostRegister();
 
-				<div className="flex flex-col space-y-2">
+	// const {
+	// 	mutateAsync: login,
+	// 	isPending: isPendingLogin,
+	// 	isSuccess: isSuccessLogin,
+	// } = usePostSessionsPassword();
+
+	const onSubmit = async (data: PostRegisterBody) => {
+		try {
+			const response = await createAccount({ data });
+
+			toast.success("Sucesso!", {
+				description: response?.id || "Conta criada com sucesso!",
+			});
+		} catch (error) {
+			if (error instanceof AxiosError) {
+				console.error(error);
+				toast.error("Erro ao criar conta", {
+					description: (error.response?.data as { message: string })?.message,
+				});
+			} else {
+				console.error("Unexpected error:", error);
+				toast.error("Erro inesperado ao criar conta");
+			}
+		}
+	};
+
+	return (
+		<>
+			<Form {...form}>
+				<form
+					onSubmit={form.handleSubmit(onSubmit)}
+					className="w-full max-w-[440px] space-y-6"
+				>
+					<FormField
+						control={form.control}
+						name="name"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>Nome</FormLabel>
+								<FormControl>
+									<Input placeholder="Nome completo" {...field} />
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+
+					<FormField
+						control={form.control}
+						name="email"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>E-mail</FormLabel>
+								<FormControl>
+									<Input placeholder="E-mail" {...field} />
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+
 					<FormField
 						control={form.control}
 						name="password"
@@ -71,54 +107,57 @@ export function SignUpForm() {
 							<FormItem>
 								<FormLabel>Senha</FormLabel>
 								<FormControl>
-									<Input {...field} placeholder="Senha" />
+									<Input
+										// isStrengthVisible={true}
+                    type="password"
+										{...field}
+										placeholder="Senha"
+									/>
 								</FormControl>
-								{/* {errors?.password && (
-									<FormMessage>{errors.password[0]}</FormMessage>
-								)} */}
+								<FormMessage />
 							</FormItem>
 						)}
 					/>
 
-					<div className="flex items-center justify-between gap-2">
-						<div className="flex items-center space-x-2.5">
-							<Checkbox
-								id="rememberPassword"
-								checked={rememberMe}
-								onCheckedChange={(checked) => setRememberMe(!!checked)}
-							/>
-							<label
-								htmlFor="terms"
-								className="text-sm text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-							>
-								Lembrar senha
-							</label>
-						</div>
+					{/* <FormField
+								control={form.control}
+								name="confirmPassword"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Senha</FormLabel>
+										<FormControl>
+											<Input placeholder="Senha" type="password" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/> */}
 
-						<Button size={"sm"} variant={"link"} className="px-0">
-							<Link href={"/recuperar-senha"}>Esqueci minha senha</Link>
-						</Button>
-					</div>
-				</div>
-
-				<Button
-					type="submit"
-					// disabled={isPending}
-					// isLoading={isPending}
-					className="w-full"
-				>
-					Entrar
-				</Button>
-			</form>
-
-			<div>
-				<span className="text-muted-foreground">Não tem uma conta?&nbsp;</span>
-				<Link href={"/registrar"}>
-					<Button variant={"link"} className="px-0 text-base">
-						Cadastre-se
+					<Button
+						type="submit"
+						disabled={isPendingCreateAccount}
+						// isLoading={isPendingCreateAccount}
+						className="w-full"
+					>
+						Registrar-se
 					</Button>
-				</Link>
-			</div>
-		</Form>
+
+					<div className="flex items-center space-x-2.5 w-full text-muted-foreground">
+						<Separator className="flex-1" />
+						<span className="text-xs">ou entrar com</span>
+						<Separator className="flex-1" />
+					</div>
+				</form>
+
+				{/* <GoogleProvider /> */}
+			</Form>
+
+			<span className="text-muted-foreground text-sm">
+				Possui uma conta?&nbsp;
+				<Button size={"sm"} variant={"link"} className="px-0">
+					<Link href="/entrar">Entrar</Link>
+				</Button>
+			</span>
+		</>
 	);
 }

@@ -1,0 +1,61 @@
+"use server";
+
+import { HTTPError } from "ky";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+import { PostLogin200 } from "@/http/generated/api.schemas";
+import { postLoginBody } from "@/http/generated/schemas/auth/auth.zod";
+import { api } from "@/lib/api";
+
+interface SignInWithEmailAndPasswordRequest {
+	email: string;
+	password: string;
+}
+
+interface SignInWithEmailAndPasswordResponse {
+	token: string;
+}
+
+export const sighInWithEmailAndPassword = async (
+	_: unknown,
+	data: FormData,
+) => {
+	const result = postLoginBody.safeParse(Object.fromEntries(data));
+
+	if (!result.success) {
+		const errors = result.error.flatten().fieldErrors;
+
+		return { success: false, message: null, errors };
+	}
+
+	const { email, password } = result.data;
+
+	try {
+		const response = await api
+			.post<SignInWithEmailAndPasswordRequest>("api/auth/login", {
+				json: {
+					email,
+					password,
+				},
+			})
+			.json<PostLogin200>();
+
+		if (response?.token) {
+			(await cookies()).set("token", data.get("token") as string, {
+				path: "/",
+				maxAge: 60 * 60 * 24 * 7, // 7 days
+			});
+		}
+	} catch (error) {
+		if (error instanceof HTTPError) {
+			const { message } = await error.response.json();
+
+			return { success: false, message, errors: null };
+		}
+
+		return { success: false, message: "Erro desconhecido", errors: null };
+	}
+
+	redirect("/resumo");
+};
