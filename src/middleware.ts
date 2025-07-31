@@ -12,48 +12,42 @@ const PUBLIC_ROUTES = [
 
 const PROTECTED_ROUTES = [
   "/dashboard",
-  "/dashboard/" // Adicione outras rotas protegidas aqui
+  "/dashboard/"
 ];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("token")?.value;
 
-  // 1. Verificar se é uma rota protegida
+  // Verificação de rotas
   const isProtectedRoute = PROTECTED_ROUTES.some(route => 
     pathname === route || pathname.startsWith(route + '/')
   );
 
-  // 2. Verificar se é uma rota pública
   const isPublicRoute = PUBLIC_ROUTES.some(route => 
     pathname === route || pathname.startsWith(route + '/')
   );
 
-  // 3. Rota raiz - redireciona conforme autenticação
+  // Redirecionamentos
   if (pathname === "/") {
-    if (token) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-    return NextResponse.next();
+    return token 
+      ? NextResponse.redirect(new URL("/dashboard", request.url))
+      : NextResponse.next();
   }
 
-  // 4. Rota protegida sem token - redireciona para login
   if (isProtectedRoute && !token) {
     return NextResponse.redirect(new URL("/entrar", request.url));
   }
 
-  // 5. Rota de login/registro com token - redireciona para dashboard
   if ((pathname === "/entrar" || pathname === "/registrar") && token) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // 6. Validação do token JWT para rotas protegidas
+  // Validação do token
   if (isProtectedRoute && token) {
     try {
       const { exp } = jwtDecode(token);
-      const isTokenExpired = exp && exp * 1000 < Date.now();
-
-      if (isTokenExpired) {
+      if (exp && exp * 1000 < Date.now()) {
         const response = NextResponse.redirect(new URL("/entrar", request.url));
         response.cookies.delete("token");
         return response;

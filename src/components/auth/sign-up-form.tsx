@@ -11,59 +11,76 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+// import { PasswordStrength } from "@/components/ui/password-strength";
 import { postRegisterBody } from "@/http/generated/schemas/auth/auth.zod";
 import { PostRegisterBody } from "@/http/generated/api.schemas";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
-import { usePostRegister } from "@/http/generated/api";
+// import { GoogleProvider } from "./google-provider";
+import axios from "axios";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
 import { useRouter } from "next/navigation";
+import { PasswordStrength } from "../ui/password-strength";
 
 export function SignUpForm() {
 	const router = useRouter();
 	const form = useForm<PostRegisterBody>({
-		resolver: zodResolver(postRegisterBody),
-		defaultValues: {
-			name: "",
-			email: "",
-			password: "",
-		},
-	});
+	resolver: zodResolver(postRegisterBody),
+	defaultValues: {
+		name: "",
+		email: "",
+		password: "",
+	},
+});
 
-	const {
-		mutateAsync: createAccount,
-		isPending: isPendingCreateAccount,
-		isSuccess: isSuccessCreateAccount,
-	} = usePostRegister();
+const [isPendingCreateAccount, setIsPendingCreateAccount] = React.useState(false);
 
-	// const {
-	// 	mutateAsync: login,
-	// 	isPending: isPendingLogin,
-	// 	isSuccess: isSuccessLogin,
-	// } = usePostSessionsPassword();
+const createAccount = async (data: PostRegisterBody) => {
+    setIsPendingCreateAccount(true);
+    try {
+        const response = await axios.post(
+            'http://localhost:3333/register', // Endpoint correto (sem /docs/#)
+            data,
+            {
+                headers: {
+                    'Content-Type': 'application/json', // Garante que o Fastify entenda o corpo
+                },
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error('Erro ao criar conta:', error);
+        throw error;
+    } finally {
+        setIsPendingCreateAccount(false);
+    }
+};
 
-	const onSubmit = async (data: PostRegisterBody) => {
-		try {
-			const response = await createAccount({ data });
 
-			toast.success("Sucesso!", {
-				description: response?.id || "Conta criada com sucesso!",
-			});
-		} catch (error) {
-			if (error instanceof AxiosError) {
-				console.error(error);
-				toast.error("Erro ao criar conta", {
-					description: (error.response?.data as { message: string })?.message,
-				});
-			} else {
-				console.error("Unexpected error:", error);
-				toast.error("Erro inesperado ao criar conta");
-			}
-		}
-	};
+const onSubmit = async (data: PostRegisterBody) => {
+  try {
+    const response = await createAccount(data);
+
+    toast.success("Conta criada com sucesso!", {
+      description: response.message,
+    });
+
+    router.push("/entrar");
+
+  } catch (error) {
+    if (error instanceof AxiosError) {
+      toast.error("Erro ao criar conta", {
+        description: (error.response?.data as { message: string })?.message,
+      });
+    } else {
+      toast.error("Erro inesperado ao criar conta");
+    }
+  }
+};
+
 
 	return (
 		<>
@@ -107,9 +124,8 @@ export function SignUpForm() {
 							<FormItem>
 								<FormLabel>Senha</FormLabel>
 								<FormControl>
-									<Input
-										// isStrengthVisible={true}
-                    type="password"
+									<PasswordStrength
+										isStrengthVisible
 										{...field}
 										placeholder="Senha"
 									/>
@@ -118,20 +134,6 @@ export function SignUpForm() {
 							</FormItem>
 						)}
 					/>
-
-					{/* <FormField
-								control={form.control}
-								name="confirmPassword"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Senha</FormLabel>
-										<FormControl>
-											<Input placeholder="Senha" type="password" {...field} />
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/> */}
 
 					<Button
 						type="submit"
